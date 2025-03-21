@@ -23,8 +23,13 @@
 			height = <3120>;
 			stride = <(1440 * 4)>;
 			format = "a8r8g8b8";
-			lab-supply = <&lab>;
-			ibb-supply = <&ibb>;
+
+			panel = <&fb_panel>;
+
+			fb_panel: fb-panel {
+				width-mm = <72>;
+				height-mm = <153>;
+			};
 		};
 	};
 
@@ -67,39 +72,8 @@
 	};
 };
 
-&adsp_pas {
-	firmware-name = "qcom/sdm845/judyln/adsp.mbn";
-};
-
-&cdsp_pas {
-	firmware-name = "qcom/sdm845/judyln/cdsp.mbn";
-};
-
 &gmu {
 	status = "okay";
-};
-
-&gpu {
-	status = "okay";
-
-	zap-shader {
-		memory-region = <&gpu_mem>;
-		firmware-name = "qcom/sdm845/judyln/a630_zap.mbn";
-	};
-};
-
-&ipa {
-	qcom,gsi-loader = "self";
-	memory-region = <&ipa_fw_mem>;
-	firmware-name = "qcom/sdm845/judyln/ipa_fws.mbn";
-};
-
-&mss_pil {
-	firmware-name = "qcom/sdm845/judyln/mba.mbn", "qcom/sdm845/judyln/modem.mbn";
-};
-
-&venus {
-	firmware-name = "qcom/sdm845/judyln/venus.mbn";
 };
 
 &tlmm {
@@ -112,7 +86,7 @@
 	};
 
 	hall_sensor_default: hall-sensor-default-state {
-		pins = "gpio4";
+		pins = "gpio124";
 		function = "gpio";
 
 		drive-strength = <2>;
@@ -177,21 +151,40 @@
 	status = "okay";
 };
 
+&ibb {
+	regulator-min-microvolt = <4600000>;
+	regulator-max-microvolt = <6000000>;
+	regulator-over-current-protection;
+	regulator-pull-down;
+	regulator-soft-start;
+	regulator-always-on;
+	qcom,discharge-resistor-kohms = <300>;
+};
+
+&lab {
+	regulator-min-microvolt = <4600000>;
+	regulator-max-microvolt = <6000000>;
+	regulator-over-current-protection;
+	regulator-pull-down;
+	regulator-soft-start;
+};
+
 &mdss_dsi0 {
 	status = "okay";
 	vdda-supply = <&vdda_mipi_dsi0_1p2>;
 
 	display_panel: panel@0 {
-		status = "okay";
 		reg = <0>;
-		vddi-supply = <&vreg_l14a_1p88>;
-		vpnl-supply = <&vreg_l28a_3p0>;
-		reset-gpios = <&tlmm 6 GPIO_ACTIVE_LOW>;
+		compatible = "lg,sw49410";
+
+		vddpos-supply = <&lab>;
+		vddneg-supply = <&ibb>;
 
 		backlight = <&pmi8998_wled>;
-		pinctrl-0 = <&sde_dsi_active &sde_te_active_sleep>;
-		pinctrl-1 = <&sde_dsi_sleep &sde_te_active_sleep>;
-		pinctrl-names = "default", "sleep";
+		reset-gpios = <&tlmm 6 GPIO_ACTIVE_LOW>;
+
+		pinctrl-names = "default";
+		pinctrl-0 = <&sde_dsi_active &sde_te_active_sleep &sde_dsi_sleep>;
 
 		port {
 			panel_in: endpoint {
@@ -290,86 +283,6 @@
 
 &spi15 {
 	status = "okay";
-
-	num-cs = <1>;
-	clock-frequency = <50000000>;
-
-	sw49410@0 {
-		compatible = "siw,sw49410";
-		reg = <0>;
-		status = "okay";
-		interrupt-parent = <&tlmm>;
-		interrupts = <31 0x2008>;
-		irqflags = <0x00000002>;
-		spi-max-frequency = <50000000>;
-
-		reset-gpio = <&tlmm 32 0x00>;
-		irq-gpio = <&tlmm 31 0x2008>;
-
-		/* caps */
-		max_x = <1439>;
-		max_y = <3119>;
-		max_pressure = <0xff>;
-		max_width_major = <1439>;
-		max_width_minor = <3119>;
-		max_orientation = <90>;
-		max_id = <10>;
-		hw_reset_delay = <90>;
-		sw_reset_delay = <10>;
-
-		/* role */
-		use_lpwg = <1>;
-		use_lpwg_test = <1>;
-		hide_coordinate = <1>;
-
-		/* firmware */
-		fw_image = "touch/judyln/SW49410_L0W60NEO_1_07.img";
-
-		panel_spec = "touch/judyln/judyln_limit.txt";
-		panel_spec_mfts_folder = "touch/judyln/judyln_limit_mfts.txt";
-
-		/* asc */
-		use_asc = <0>;
-		low_delta_thres = <350>;
-		high_delta_thres = <600>;
-		max_delta_cnt = <2>;
-
-		/* Performance Test */
-		use_perf_test = <1>;
-		test_delay = <8>;
-		test_pressure = <50>;
-		test_width = <100>;
-		click_test_x = <180>;
-		click_test_y = <760>;
-		v_drag_test_x = <144>;
-		v_drag_test_start_y = <2003>;
-		v_drag_test_end_y = <1116>;
-		h_drag_test_start_x = <1163>;
-		h_drag_test_end_x = <276>;
-		h_drag_test_y = <2184>;
-	};
-};
-
-&uart6 {
-	status = "okay";
-
-	pinctrl-0 = <&qup_uart6_4pin>;
-
-	bluetooth {
-		compatible = "qcom,wcn3990-bt";
-
-		/*
-		 * This path is relative to the qca/
-		 * subdir under lib/firmware.
-		 */
-		firmware-name = "judyln/crnv21.bin";
-
-		vddio-supply = <&vreg_s4a_1p8>;
-		vddxo-supply = <&vreg_l7a_1p8>;
-		vddrf-supply = <&vreg_l17a_1p3>;
-		vddch0-supply = <&vreg_l25a_3p3>;
-		max-speed = <3200000>;
-	};
 };
 
 &i2c3 {
@@ -392,17 +305,6 @@
 		compatible = "nxp,tfa9894";
 		reg = <0x34>;
 	};
-};
-
-&wifi {
-	status = "okay";
-	vdd-0.8-cx-mx-supply = <&vreg_l5a_0p8>;
-	vdd-1.8-xo-supply = <&vreg_l7a_1p8>;
-	vdd-1.3-rfa-supply = <&vreg_l17a_1p3>;
-	vdd-3.3-ch0-supply = <&vreg_l25a_3p3>;
-	vdd-3.3-ch1-supply = <&vreg_l23a_3p3>;
-
-	qcom,snoc-host-cap-8bit-quirk;
 };
 
 &usb_1_dwc3 {
